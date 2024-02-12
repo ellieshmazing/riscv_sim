@@ -504,7 +504,14 @@ void U_Processing()
 
 void SYSCALL_Processing()
 {
-
+	switch(CURRENT_STATE.REGS[2])
+	{
+		case 10:
+			printf("Terminating Execution of Program.\n\n");
+			RUN_FLAG = FALSE;
+		default:
+			break;
+	}
 }
 
 /************************************************************/
@@ -515,7 +522,8 @@ void handle_instruction()
 	// Generate SYSCALL if end of program reached
 	if ((CURRENT_STATE.PC - MEM_TEXT_BEGIN) / 4 >= PROGRAM_SIZE)
 	{
-		RUN_FLAG = FALSE;
+		CURRENT_STATE.REGS[2] = 10;
+		SYSCALL_Processing();
 		return;
 	}
 
