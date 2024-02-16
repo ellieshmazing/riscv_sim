@@ -547,9 +547,13 @@ void J_Processing(uint32_t rd, uint32_t imm)
 	NEXT_STATE.PC += imm;
 }
 
-void U_Processing()
+void U_Processing(uint32_t rd, uint32_t imm)
 {
-	// hi
+	// Move imm to fill word length
+	imm = imm << 12;
+
+	// Place imm in rd
+	NEXT_STATE.REGS[rd] = imm;
 }
 
 void SYSCALL_Processing()
@@ -698,6 +702,16 @@ void handle_instruction()
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 12;
 		J_Processing(rd, imm);
+	}
+	else if (opcode == 55)
+	{ // U-Type
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskimm = 0xFFFFF000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 12;
+		U_Processing(rd, imm);
 	}
 	else
 	{
@@ -924,6 +938,11 @@ void J_Print(uint32_t rd, uint32_t imm){
 	}
 }
 
+void U_Print(uint32_t rd, uint32_t imm) // LUI
+{
+	printf("lui x%d, %d\n", rd, imm);
+}
+
 void print_program()
 {
 	printf("\n");
@@ -1059,6 +1078,16 @@ void print_instruction(uint32_t addr)
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 12;
 		J_Print(rd, imm);
+	}
+	else if (opcode == 55)
+	{ // U-Type
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskimm = 0xFFFFF000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 12;
+		U_Print(rd, imm);
 	}
 	else
 	{
