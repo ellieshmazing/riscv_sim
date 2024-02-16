@@ -487,9 +487,41 @@ void S_Processing(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32
 	}
 }
 
-void B_Processing()
+void B_Processing(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm11)
 {
-	// hi
+	// Recombine immediate
+	uint32_t imm = (imm11 << 5) + imm4;
+
+	switch (f3)
+	{
+		case 0:	// beq
+			if (NEXT_STATE.REGS[rs1] == NEXT_STATE.REGS[rs2])
+			{
+				NEXT_STATE.PC += imm;
+			}
+			break;
+		case 1:	// bne
+			if (NEXT_STATE.REGS[rs1] != NEXT_STATE.REGS[rs2])
+			{
+				NEXT_STATE.PC += imm;
+			}
+			break;
+		case 4:	// blt
+			if (NEXT_STATE.REGS[rs1] < NEXT_STATE.REGS[rs2])
+			{
+				NEXT_STATE.PC += imm;
+			}
+			break;
+		case 5:	// bge
+			if (NEXT_STATE.REGS[rs1] >= NEXT_STATE.REGS[rs2])
+			{
+				NEXT_STATE.PC += imm;
+			}
+			break;	
+		default:
+		RUN_FLAG = FALSE;
+		break;
+	}
 }
 
 void J_Processing()
@@ -621,10 +653,17 @@ void handle_instruction()
 		uint32_t maskimm2 = 0xFE000000;
 		uint32_t imm2 = instruction & maskimm2;
 		imm2 = imm2 >> 25;
-		// R_Print(imm1,f3,rs1,rs2,imm2); NEEDS B-PROCESSING()
+		B_Processing(imm1,f3,rs1,rs2,imm2);
 	}
 	else if (opcode == 111)
-	{ // J-Type NEEDS J-PROCESSING
+	{ // J-Type
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskimm = 0xFFFFF000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 12;
+		//J_Print(rd, imm); NEEDS J-PROCESSING
 	}
 	else
 	{
@@ -649,133 +688,6 @@ void initialize()
 /************************************************************/
 /* Print the program loaded into memory (in RISCV assembly format)    */
 /************************************************************/
-void print_program()
-{
-	printf("\n");
-
-	for (int i = 0; i < PROGRAM_SIZE; i++)
-	{
-		print_instruction(MEM_TEXT_BEGIN + (i * 4));
-	}
-
-	printf("\n");
-}
-
-/************************************************************/
-/* Print the instruction at given memory address (in RISCV assembly format)    */
-/************************************************************/
-void print_instruction(uint32_t addr)
-{
-
-	uint32_t instruction = mem_read_32(addr);
-	uint32_t maskopcode = 0x7F;
-	uint32_t opcode = instruction & maskopcode;
-	if (opcode == 51)
-	{ // R-type
-		uint32_t maskrd = 0xF80;
-		uint32_t rd = instruction & maskrd;
-		rd = rd >> 7;
-		uint32_t maskf3 = 0x7000;
-		uint32_t f3 = instruction & maskf3;
-		f3 = f3 >> 12;
-		uint32_t maskrs1 = 0xF8000;
-		uint32_t rs1 = instruction & maskrs1;
-		rs1 = rs1 >> 15;
-		uint32_t maskrs2 = 0x1F00000;
-		uint32_t rs2 = instruction & maskrs2;
-		rs2 = rs2 >> 20;
-		uint32_t maskf7 = 0xFE000000;
-		uint32_t f7 = instruction & maskf7;
-		f7 = f7 >> 25;
-		R_Print(rd, f3, rs1, rs2, f7);
-	}
-	else if (opcode == 3)
-	{ // ILoad-Type
-		uint32_t maskrd = 0xF80;
-		uint32_t rd = instruction & maskrd;
-		rd = rd >> 7;
-		uint32_t maskf3 = 0x7000;
-		uint32_t f3 = instruction & maskf3;
-		f3 = f3 >> 12;
-		uint32_t maskrs1 = 0xF8000;
-		uint32_t rs1 = instruction & maskrs1;
-		rs1 = rs1 >> 15;
-		uint32_t maskimm = 0xFFF00000;
-		uint32_t imm = instruction & maskimm;
-		imm = imm >> 20;
-		ILoad_Print(rd,f3,rs1,imm);
-	}
-	else if (opcode == 19)
-	{ // Iimm-Type
-		uint32_t maskrd = 0xF80;
-		uint32_t rd = instruction & maskrd;
-		rd = rd >> 7;
-		uint32_t maskf3 = 0x7000;
-		uint32_t f3 = instruction & maskf3;
-		f3 = f3 >> 12;
-		uint32_t maskrs1 = 0xF8000;
-		uint32_t rs1 = instruction & maskrs1;
-		rs1 = rs1 >> 15;
-		uint32_t maskimm = 0xFFF00000;
-		uint32_t imm = instruction & maskimm;
-		imm = imm >> 20;
-		Iimm_Print(rd,f3,rs1,imm);
-	}
-	else if (opcode == 35)
-	{ // S-Type
-		uint32_t maskimm4 = 0xF80;
-		uint32_t imm4 = instruction & maskimm4;
-		imm4 = imm4 >> 7;
-		uint32_t maskf3 = 0x7000;
-		uint32_t f3 = instruction & maskf3;
-		f3 = f3 >> 12;
-		uint32_t maskrs1 = 0xF8000;
-		uint32_t rs1 = instruction & maskrs1;
-		rs1 = rs1 >> 15;
-		uint32_t maskrs2 = 0x1F00000;
-		uint32_t rs2 = instruction & maskrs2;
-		rs2 = rs2 >> 20;
-		uint32_t maskimm11 = 0xFE000000;
-		uint32_t imm11 = instruction & maskimm11;
-		imm11 = imm11 >> 25;
-		S_Print(imm4, f3, rs1, rs2, imm11);
-	}
-	else if (opcode == 99)
-	{ // B-Type
-		uint32_t maskimm1 = 0xF80;
-		uint32_t imm1 = instruction & maskimm1;
-		imm1 = imm1 >> 7;
-		uint32_t maskf3 = 0x7000;
-		uint32_t f3 = instruction & maskf3;
-		f3 = f3 >> 12;
-		uint32_t maskrs1 = 0xF8000;
-		uint32_t rs1 = instruction & maskrs1;
-		rs1 = rs1 >> 15;
-		uint32_t maskrs2 = 0x1F00000;
-		uint32_t rs2 = instruction & maskrs2;
-		rs2 = rs2 >> 20;
-		uint32_t maskimm2 = 0xFE000000;
-		uint32_t imm2 = instruction & maskimm2;
-		imm2 = imm2 >> 25;
-		B_Print(imm1,f3,rs1,rs2,imm2);
-	}
-	else if (opcode == 111)
-	{ // J-Type
-		uint32_t maskrd = 0xF80;
-		uint32_t rd = instruction & maskrd;
-		rd = rd >> 7;
-		uint32_t maskimm = 0xFFFFF000;
-		uint32_t imm = instruction & maskimm;
-		imm = imm >> 12;
-		J_Print(rd, imm);
-	}
-	else
-	{
-		printf("instruction print not yet created\n");
-	}
-	CURRENT_STATE = NEXT_STATE;
-	return;
-}
 
 void R_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t f7)
 {
@@ -912,6 +824,134 @@ void B_Print(uint32_t imm1, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t im
 
 void J_Print(uint32_t rd, uint32_t imm){
 
+}
+
+void print_program()
+{
+	printf("\n");
+
+	for (int i = 0; i < PROGRAM_SIZE; i++)
+	{
+		print_instruction(MEM_TEXT_BEGIN + (i * 4));
+	}
+
+	printf("\n");
+}
+
+/************************************************************/
+/* Print the instruction at given memory address (in RISCV assembly format)    */
+/************************************************************/
+void print_instruction(uint32_t addr)
+{
+
+	uint32_t instruction = mem_read_32(addr);
+	uint32_t maskopcode = 0x7F;
+	uint32_t opcode = instruction & maskopcode;
+	if (opcode == 51)
+	{ // R-type
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskf3 = 0x7000;
+		uint32_t f3 = instruction & maskf3;
+		f3 = f3 >> 12;
+		uint32_t maskrs1 = 0xF8000;
+		uint32_t rs1 = instruction & maskrs1;
+		rs1 = rs1 >> 15;
+		uint32_t maskrs2 = 0x1F00000;
+		uint32_t rs2 = instruction & maskrs2;
+		rs2 = rs2 >> 20;
+		uint32_t maskf7 = 0xFE000000;
+		uint32_t f7 = instruction & maskf7;
+		f7 = f7 >> 25;
+		R_Print(rd, f3, rs1, rs2, f7);
+	}
+	else if (opcode == 3)
+	{ // ILoad-Type
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskf3 = 0x7000;
+		uint32_t f3 = instruction & maskf3;
+		f3 = f3 >> 12;
+		uint32_t maskrs1 = 0xF8000;
+		uint32_t rs1 = instruction & maskrs1;
+		rs1 = rs1 >> 15;
+		uint32_t maskimm = 0xFFF00000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 20;
+		ILoad_Print(rd,f3,rs1,imm);
+	}
+	else if (opcode == 19)
+	{ // Iimm-Type
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskf3 = 0x7000;
+		uint32_t f3 = instruction & maskf3;
+		f3 = f3 >> 12;
+		uint32_t maskrs1 = 0xF8000;
+		uint32_t rs1 = instruction & maskrs1;
+		rs1 = rs1 >> 15;
+		uint32_t maskimm = 0xFFF00000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 20;
+		Iimm_Print(rd,f3,rs1,imm);
+	}
+	else if (opcode == 35)
+	{ // S-Type
+		uint32_t maskimm4 = 0xF80;
+		uint32_t imm4 = instruction & maskimm4;
+		imm4 = imm4 >> 7;
+		uint32_t maskf3 = 0x7000;
+		uint32_t f3 = instruction & maskf3;
+		f3 = f3 >> 12;
+		uint32_t maskrs1 = 0xF8000;
+		uint32_t rs1 = instruction & maskrs1;
+		rs1 = rs1 >> 15;
+		uint32_t maskrs2 = 0x1F00000;
+		uint32_t rs2 = instruction & maskrs2;
+		rs2 = rs2 >> 20;
+		uint32_t maskimm11 = 0xFE000000;
+		uint32_t imm11 = instruction & maskimm11;
+		imm11 = imm11 >> 25;
+		S_Print(imm4, f3, rs1, rs2, imm11);
+	}
+	else if (opcode == 99)
+	{ // B-Type
+		uint32_t maskimm1 = 0xF80;
+		uint32_t imm1 = instruction & maskimm1;
+		imm1 = imm1 >> 7;
+		uint32_t maskf3 = 0x7000;
+		uint32_t f3 = instruction & maskf3;
+		f3 = f3 >> 12;
+		uint32_t maskrs1 = 0xF8000;
+		uint32_t rs1 = instruction & maskrs1;
+		rs1 = rs1 >> 15;
+		uint32_t maskrs2 = 0x1F00000;
+		uint32_t rs2 = instruction & maskrs2;
+		rs2 = rs2 >> 20;
+		uint32_t maskimm2 = 0xFE000000;
+		uint32_t imm2 = instruction & maskimm2;
+		imm2 = imm2 >> 25;
+		B_Print(imm1,f3,rs1,rs2,imm2);
+	}
+	else if (opcode == 111)
+	{ // J-Type
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskimm = 0xFFFFF000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 12;
+		J_Print(rd, imm);
+	}
+	else
+	{
+		printf("instruction print not yet created\n");
+	}
+	CURRENT_STATE = NEXT_STATE;
+	return;
 }
 
 /***************************************************************/

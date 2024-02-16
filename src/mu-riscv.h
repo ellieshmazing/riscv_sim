@@ -77,11 +77,3 @@ void handle_instruction(); /*IMPLEMENT THIS*/
 void initialize();
 void print_program(); /*IMPLEMENT THIS*/
 void print_instruction(uint32_t);
-
-//Format-specific Print Functions
-void R_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t f7);
-void S_Print(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm11);
-void ILoad_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm);
-void Iimm_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm);
-void B_Print(uint32_t imm1, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm2);
-void J_Print(uint32_t rd, uint32_t imm);
