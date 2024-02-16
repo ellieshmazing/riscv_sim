@@ -461,6 +461,21 @@ void Iimm_Processing(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm)
 	}
 }
 
+void JALR_Processing(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm)
+{
+	switch (f3)
+	{
+		case 0:	// JALR
+			NEXT_STATE.REGS[rd] = NEXT_STATE.PC + 4;
+			CURRENT_STATE.PC = NEXT_STATE.REGS[rs1] + imm - 4;
+			break;
+		default:
+			printf("Invalid instruction");
+			RUN_FLAG = FALSE;
+			break;
+	}
+}
+
 void S_Processing(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm11)
 {
 	// Recombine immediate
@@ -492,41 +507,44 @@ void B_Processing(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32
 	// Recombine immediate
 	uint32_t imm = (imm11 << 5) + imm4;
 
+	// Modification of CURRENT_STATE and the subtraction of 4 handles potential complications
+	// of Program Counter increment instruction
 	switch (f3)
 	{
 		case 0:	// beq
 			if (NEXT_STATE.REGS[rs1] == NEXT_STATE.REGS[rs2])
 			{
-				NEXT_STATE.PC += imm;
+				CURRENT_STATE.PC += imm - 4;
 			}
 			break;
 		case 1:	// bne
 			if (NEXT_STATE.REGS[rs1] != NEXT_STATE.REGS[rs2])
 			{
-				NEXT_STATE.PC += imm;
+				CURRENT_STATE.PC += imm - 4;
 			}
 			break;
 		case 4:	// blt
 			if (NEXT_STATE.REGS[rs1] < NEXT_STATE.REGS[rs2])
 			{
-				NEXT_STATE.PC += imm;
+				CURRENT_STATE.PC += imm - 4;
 			}
 			break;
 		case 5:	// bge
 			if (NEXT_STATE.REGS[rs1] >= NEXT_STATE.REGS[rs2])
 			{
-				NEXT_STATE.PC += imm;
+				CURRENT_STATE.PC += imm - 4;
 			}
 			break;	
 		default:
-		RUN_FLAG = FALSE;
-		break;
+			RUN_FLAG = FALSE;
+			break;
 	}
 }
 
-void J_Processing()
+void J_Processing(uint32_t rd, uint32_t imm)
 {
-	// hi
+	NEXT_STATE.REGS[rd] = CURRENT_STATE.PC + 4;
+	NEXT_STATE.PC += imm;
 }
 
 void U_Processing()
@@ -617,6 +635,22 @@ void handle_instruction()
 		imm = imm >> 20;
 		Iimm_Processing(rd, f3, rs1, imm);
 	}
+	else if (opcode == 103)
+	{ // JALR
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskf3 = 0x7000;
+		uint32_t f3 = instruction & maskf3;
+		f3 = f3 >> 12;
+		uint32_t maskrs1 = 0xF8000;
+		uint32_t rs1 = instruction & maskrs1;
+		rs1 = rs1 >> 15;
+		uint32_t maskimm = 0xFFF00000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 20;
+		JALR_Processing(rd, f3, rs1, imm);
+	}
 	else if (opcode == 35)
 	{ // S-Type
 		uint32_t maskimm4 = 0xF80;
@@ -663,7 +697,7 @@ void handle_instruction()
 		uint32_t maskimm = 0xFFFFF000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 12;
-		//J_Print(rd, imm); NEEDS J-PROCESSING
+		J_Processing(rd, imm);
 	}
 	else
 	{
@@ -818,12 +852,76 @@ void Iimm_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm)
 	}
 }
 
-void B_Print(uint32_t imm1, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm2){
+void JALR_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm)
+{
+	switch (f3)
+	{
+		case 0:	// JALR
+			if (rd == 0 && imm == 0)	// JR
+			{
+				printf("jr x%d\n", rs1);
+			}
+			else	// JALR
+			{
+				printf("jalr x%d, x%d, %d\n", rd, rs1, imm);
+			}
+			break;
+	}
+}
 
+void B_Print(uint32_t imm1, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm2)
+{
+	// Recombine immediate
+	uint32_t imm = (imm1 << 5) + imm2;
+
+	switch (f3)
+	{
+		case 0:	// beq
+			printf("beq x%d, x%d, %d\n", rs1, rs2, imm);
+			break;
+		case 1:	// bne
+			printf("bne x%d, x%d, %d\n", rs1, rs2, imm);
+			break;
+		case 4:	// blt and connotative uses
+			if (rs1 == 0)	// bgtz
+			{
+				printf("bgtz x%d, %d\n", rs2, imm);
+			}
+			else if (rs2 == 0)	// bltz
+			{
+				printf("bltz x%d, %d\n", rs1, imm);
+			}
+			else	// blt
+			{
+				printf("blt x%d, x%d, %d\n", rs1, rs2, imm);
+			}
+			break;	
+		case 5:	// bge and connotative uses
+			if (rs1 == 0)	// blez
+			{
+				printf("blez x%d, %d\n", rs2, imm);
+			}
+			else if (rs2 == 0)	// bgez
+			{
+				printf("bgez x%d, %d\n", rs1, imm);
+			}
+			else	// beq
+			{
+				printf("beq x%d, x%d, %d\n", rs1, rs2, imm);
+			}
+			break;	
+	}
 }
 
 void J_Print(uint32_t rd, uint32_t imm){
-
+	if (rd == 0)	// J
+	{
+		printf("j %d\n", imm);
+	}
+	else	// JAL
+	{
+		printf("jal x%d, %d\n", rd, imm);
+	}
 }
 
 void print_program()
@@ -897,6 +995,22 @@ void print_instruction(uint32_t addr)
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 20;
 		Iimm_Print(rd,f3,rs1,imm);
+	}
+	else if (opcode == 103)
+	{ // JALR
+		uint32_t maskrd = 0xF80;
+		uint32_t rd = instruction & maskrd;
+		rd = rd >> 7;
+		uint32_t maskf3 = 0x7000;
+		uint32_t f3 = instruction & maskf3;
+		f3 = f3 >> 12;
+		uint32_t maskrs1 = 0xF8000;
+		uint32_t rs1 = instruction & maskrs1;
+		rs1 = rs1 >> 15;
+		uint32_t maskimm = 0xFFF00000;
+		uint32_t imm = instruction & maskimm;
+		imm = imm >> 20;
+		JALR_Print(rd, f3, rs1, imm);
 	}
 	else if (opcode == 35)
 	{ // S-Type
