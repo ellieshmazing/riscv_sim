@@ -451,7 +451,7 @@ void Iimm_Processing(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm)
 			NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rs1] >> imm0_4;
 			break;
 
-		case 32: // srai (NEED TO HANDLE NEGATIVE)
+		case 32: // srai
 			NEXT_STATE.REGS[rd] = NEXT_STATE.REGS[rs1] >> imm0_4;
 			break;
 
@@ -559,7 +559,7 @@ void B_Processing(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32
 void J_Processing(uint32_t rd, uint32_t imm)
 {
 	NEXT_STATE.REGS[rd] = CURRENT_STATE.PC + 4;
-	NEXT_STATE.PC += imm;
+	CURRENT_STATE.PC += imm - 4;
 }
 
 void U_Processing(uint32_t rd, uint32_t imm)
@@ -589,7 +589,7 @@ void SYSCALL_Processing()
 void handle_instruction()
 {
 	// Generate SYSCALL if end of program reached
-	if ((CURRENT_STATE.PC - MEM_TEXT_BEGIN) / 4 >= PROGRAM_SIZE)
+	if ((CURRENT_STATE.PC - MEM_TEXT_BEGIN) / 4 > PROGRAM_SIZE)
 	{
 		CURRENT_STATE.REGS[2] = 10;
 		SYSCALL_Processing();
@@ -733,7 +733,7 @@ void handle_instruction()
 		imm = twosToDecimal(imm, 20);
 		U_Processing(rd, imm);
 	}
-	else
+	else if (opcode != 0)
 	{
 		printf("instruction processing not yet created\n");
 	}
