@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -352,6 +353,18 @@ void load_program()
 	fclose(fp);
 }
 
+// Convert 2's Complement to decimal
+int twosToDecimal(uint32_t num, uint32_t bits)
+{
+	if (num >> (bits - 1) == 1)
+	{
+		num -= pow(2, bits - 1);
+		num = -num;
+	}
+
+	return num;
+}
+
 void R_Processing(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t f7)
 {
 	switch (f3)
@@ -480,6 +493,7 @@ void S_Processing(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32
 {
 	// Recombine immediate
 	uint32_t imm = (imm11 << 5) + imm4;
+	imm = twosToDecimal(imm, 12);
 
 	switch (f3)
 	{
@@ -506,6 +520,7 @@ void B_Processing(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32
 {
 	// Recombine immediate
 	uint32_t imm = (imm11 << 5) + imm4;
+	imm = twosToDecimal(imm, 12);
 
 	// Modification of CURRENT_STATE and the subtraction of 4 handles potential complications
 	// of Program Counter increment instruction
@@ -621,6 +636,7 @@ void handle_instruction()
 		uint32_t maskimm = 0xFFF00000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 20;
+		imm = twosToDecimal(imm, 12);
 		ILoad_Processing(rd, f3, rs1, imm);
 	}
 	else if (opcode == 19)
@@ -637,6 +653,7 @@ void handle_instruction()
 		uint32_t maskimm = 0xFFF00000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 20;
+		imm = twosToDecimal(imm, 12);
 		Iimm_Processing(rd, f3, rs1, imm);
 	}
 	else if (opcode == 103)
@@ -653,6 +670,7 @@ void handle_instruction()
 		uint32_t maskimm = 0xFFF00000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 20;
+		imm = twosToDecimal(imm, 12);
 		JALR_Processing(rd, f3, rs1, imm);
 	}
 	else if (opcode == 35)
@@ -701,6 +719,7 @@ void handle_instruction()
 		uint32_t maskimm = 0xFFFFF000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 12;
+		imm = twosToDecimal(imm, 20);
 		J_Processing(rd, imm);
 	}
 	else if (opcode == 55)
@@ -711,6 +730,7 @@ void handle_instruction()
 		uint32_t maskimm = 0xFFFFF000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 12;
+		imm = twosToDecimal(imm, 20);
 		U_Processing(rd, imm);
 	}
 	else
@@ -799,6 +819,7 @@ void R_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t f7)
 void S_Print(uint32_t imm4, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm11)
 {
 	uint32_t imm = (imm11 << 5) + imm4;
+	imm = twosToDecimal(imm, 12);
 
 	switch (f3)
 	{
@@ -886,7 +907,8 @@ void JALR_Print(uint32_t rd, uint32_t f3, uint32_t rs1, uint32_t imm)
 void B_Print(uint32_t imm1, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t imm2)
 {
 	// Recombine immediate
-	uint32_t imm = (imm1 << 5) + imm2;
+	uint32_t imm = (imm2 << 5) + imm1;
+	imm = twosToDecimal(imm, 12);
 
 	switch (f3)
 	{
@@ -919,9 +941,9 @@ void B_Print(uint32_t imm1, uint32_t f3, uint32_t rs1, uint32_t rs2, uint32_t im
 			{
 				printf("bgez x%d, %d\n", rs1, imm);
 			}
-			else	// beq
+			else	// bge
 			{
-				printf("beq x%d, x%d, %d\n", rs1, rs2, imm);
+				printf("bge x%d, x%d, %d\n", rs1, rs2, imm);
 			}
 			break;	
 	}
@@ -997,6 +1019,7 @@ void print_instruction(uint32_t addr)
 		uint32_t maskimm = 0xFFF00000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 20;
+		imm = twosToDecimal(imm, 12);
 		ILoad_Print(rd,f3,rs1,imm);
 	}
 	else if (opcode == 19)
@@ -1013,6 +1036,7 @@ void print_instruction(uint32_t addr)
 		uint32_t maskimm = 0xFFF00000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 20;
+		imm = twosToDecimal(imm, 12);
 		Iimm_Print(rd,f3,rs1,imm);
 	}
 	else if (opcode == 103)
@@ -1029,6 +1053,7 @@ void print_instruction(uint32_t addr)
 		uint32_t maskimm = 0xFFF00000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 20;
+		imm = twosToDecimal(imm, 12);
 		JALR_Print(rd, f3, rs1, imm);
 	}
 	else if (opcode == 35)
@@ -1077,6 +1102,7 @@ void print_instruction(uint32_t addr)
 		uint32_t maskimm = 0xFFFFF000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 12;
+		imm = twosToDecimal(imm, 20);
 		J_Print(rd, imm);
 	}
 	else if (opcode == 55)
@@ -1087,6 +1113,7 @@ void print_instruction(uint32_t addr)
 		uint32_t maskimm = 0xFFFFF000;
 		uint32_t imm = instruction & maskimm;
 		imm = imm >> 12;
+		imm = twosToDecimal(imm, 20);
 		U_Print(rd, imm);
 	}
 	else
